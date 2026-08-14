@@ -1,0 +1,10 @@
+// Configuracion del cliente Prisma y conexion a MySQL.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
