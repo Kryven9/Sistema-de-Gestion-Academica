@@ -1,4 +1,4 @@
-// Configuracion del cliente Prisma y conexion a MySQL.
+// Modelo de datos del SGA Universitario
 
 generator client {
   provider = "prisma-client-js"
@@ -7,4 +7,257 @@ generator client {
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
+}
+
+// =====================================================
+// Enums
+// =====================================================
+
+enum Rol {
+  ADMINISTRADOR
+  PROFESOR
+  ESTUDIANTE
+
+  @@map("roles")
+}
+
+enum EstadoInscripcion {
+  ACTIVA
+  ANULADA
+
+  @@map("estados_inscripcion")
+}
+
+enum EstadoEntrega {
+  PENDIENTE
+  ENTREGADA
+  CALIFICADA
+  ATRASADA
+
+  @@map("estados_entrega")
+}
+
+enum AccionAuditoria {
+  CREAR
+  MODIFICAR
+  ELIMINAR
+
+  @@map("acciones_auditoria")
+}
+
+// =====================================================
+// Modelos
+// =====================================================
+
+// Tabla base de identidad. Administrador, Profesor y Estudiante
+// se diferencian por el campo `rol` y en el caso de Estudiante,
+// por la relacion 1 a 1 con la tabla estudiantes
+model Usuario {
+  id                 String   @id @default(uuid()) @db.Char(36)
+  nombre             String   @db.VarChar(150)
+  correo             String   @unique @db.VarChar(200)
+  contrasenaHash     String   @map("contrasena_hash") @db.VarChar(255)
+  rol                Rol
+  activo             Boolean  @default(true)
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
+  estudiante         Estudiante?
+  cursosDictados     Curso[]              @relation("ProfesorCursos")
+  calificaciones     Calificacion[]       @relation("CalificadorCalificaciones")
+  auditorias         Auditoria[]
+
+  @@index([rol])
+  @@index([activo])
+  @@map("usuarios")
+}
+
+// Informacion especifica de un usuario con rol ESTUDIANTE
+model Estudiante {
+  idUsuario      String       @id @map("usuario_id") @db.Char(36)
+  matricula      Int          @unique
+  fechaCreacion  DateTime     @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
+  usuario        Usuario      @relation(fields: [idUsuario], references: [id], onDelete: Cascade)
+  inscripciones  Inscripcion[]
+  entregas       Entrega[]
+
+  @@index([matricula])
+  @@map("estudiantes")
+}
+
+model Carrera {
+  id                 String   @id @default(uuid()) @db.Char(36)
+  codigo             String   @unique @db.VarChar(20)
+  nombre             String   @db.VarChar(150)
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
+  materias Materia[]
+
+  @@map("carreras")
+}
+
+model Materia {
+  id                 String   @id @default(uuid()) @db.Char(36)
+  codigo             String   @unique @db.VarChar(20)
+  nombre             String   @db.VarChar(150)
+  creditos           Int
+  idCarrera          String   @map("carrera_id") @db.Char(36)
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
+  carrera                   Carrera                 @relation(fields: [idCarrera], references: [id], onDelete: Restrict)
+  cursos                    Curso[]
+  prerrequisitosComoOrigen  MateriaPrerrequisito[]  @relation("MateriaOrigen")
+  prerrequisitosComoDestino MateriaPrerrequisito[]  @relation("MateriaPrerrequisito")
+
+  @@index([idCarrera])
+  @@map("materias")
+}
+
+// Una materia puede requerir varias materias y ser requerida por varias.
+model MateriaPrerrequisito {
+  idMateria       String  @map("materia_id") @db.Char(36)
+  idPrerrequisito String  @map("prerrequisito_id") @db.Char(36)
+
+  materia     Materia @relation("MateriaOrigen", fields: [idMateria], references: [id], onDelete: Cascade)
+  prerrequisito Materia @relation("MateriaPrerrequisito", fields: [idPrerrequisito], references: [id], onDelete: Cascade)
+
+  @@id([idMateria, idPrerrequisito])
+  @@index([idPrerrequisito])
+  @@map("materia_prerrequisitos")
+}
+
+model Periodo {
+  id                 String   @id @default(uuid()) @db.Char(36)
+  nombre             String   @db.VarChar(100)
+  fechaInicio        DateTime @map("fecha_inicio") @db.Date
+  fechaFin           DateTime @map("fecha_fin") @db.Date
+  activo             Boolean  @default(false)
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
+  cursos Curso[]
+
+  @@index([activo])
+  @@map("periodos")
+}
+
+model Curso {
+  id                 String   @id @default(uuid()) @db.Char(36)
+  idMateria          String   @map("materia_id") @db.Char(36)
+  idPeriodo          String   @map("periodo_id") @db.Char(36)
+  idProfesor         String   @map("profesor_id") @db.Char(36)
+  cupoMaximo         Int      @map("cupo_maximo")
+  cupoDisponible     Int      @map("cupo_disponible")
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
+  materia        Materia       @relation(fields: [idMateria], references: [id], onDelete: Restrict)
+  periodo        Periodo       @relation(fields: [idPeriodo], references: [id], onDelete: Restrict)
+  profesor       Usuario       @relation("ProfesorCursos", fields: [idProfesor], references: [id], onDelete: Restrict)
+  inscripciones  Inscripcion[]
+  tareas         Tarea[]
+
+  @@index([idMateria])
+  @@index([idPeriodo])
+  @@index([idProfesor])
+  @@map("cursos")
+}
+
+model Inscripcion {
+  id                 String   @id @default(uuid()) @db.Char(36)
+  idEstudiante       String   @map("estudiante_id") @db.Char(36)
+  idCurso            String   @map("curso_id") @db.Char(36)
+  fechaInscripcion   DateTime @default(now()) @map("fecha_inscripcion")
+  estado             EstadoInscripcion @default(ACTIVA)
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
+  estudiante Estudiante @relation(fields: [idEstudiante], references: [idUsuario], onDelete: Restrict)
+  curso      Curso      @relation(fields: [idCurso], references: [id], onDelete: Restrict)
+
+  @@index([idEstudiante])
+  @@index([idCurso])
+  @@index([idEstudiante, idCurso, estado])
+  @@index([estado])
+  @@map("inscripciones")
+}
+
+model Tarea {
+  id                 String   @id @default(uuid()) @db.Char(36)
+  idCurso            String   @map("curso_id") @db.Char(36)
+  titulo             String   @db.VarChar(200)
+  descripcion        String   @db.Text
+  fechaEntrega       DateTime @map("fecha_entrega")
+  puntajeMaximo      Decimal  @map("puntaje_maximo") @db.Decimal(6, 2)
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
+  curso    Curso     @relation(fields: [idCurso], references: [id], onDelete: Cascade)
+  entregas Entrega[]
+
+  @@index([idCurso])
+  @@index([fechaEntrega])
+  @@map("tareas")
+}
+
+// Entrega: una unica entrega por estudiante/tarea
+model Entrega {
+  id                 String   @id @default(uuid()) @db.Char(36)
+  idTarea            String   @map("tarea_id") @db.Char(36)
+  idEstudiante       String   @map("estudiante_id") @db.Char(36)
+  contenido          String   @db.Text
+  fechaEntrega       DateTime @map("fecha_entrega")
+  estado             EstadoEntrega
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
+  tarea        Tarea         @relation(fields: [idTarea], references: [id], onDelete: Cascade)
+  estudiante   Estudiante    @relation(fields: [idEstudiante], references: [idUsuario], onDelete: Restrict)
+  calificacion Calificacion?
+
+  @@unique([idTarea, idEstudiante])
+  @@index([idTarea])
+  @@index([idEstudiante])
+  @@index([estado])
+  @@map("entregas")
+}
+
+// Calificacion: como maximo una por entrega
+model Calificacion {
+  id                 String   @id @default(uuid()) @db.Char(36)
+  idEntrega          String   @unique @map("entrega_id") @db.Char(36)
+  valor              Decimal  @db.Decimal(6, 2)
+  fechaRegistro      DateTime @default(now()) @map("fecha_registro")
+  observaciones      String?  @db.Text
+  idCalificador      String   @map("calificador_id") @db.Char(36)
+  fechaCreacion      DateTime @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
+  entrega     Entrega @relation(fields: [idEntrega], references: [id], onDelete: Cascade)
+  calificador Usuario @relation("CalificadorCalificaciones", fields: [idCalificador], references: [id], onDelete: Restrict)
+
+  @@index([idCalificador])
+  @@map("calificaciones")
+}
+
+// Auditoria: registro de operaciones de creacion, modificacion y eliminacion
+// sobre Curso, Inscripcion, Calificacion y Entrega
+model Auditoria {
+  id        BigInt         @id @default(autoincrement())
+  idUsuario String         @map("usuario_id") @db.Char(36)
+  entidad   String         @db.VarChar(100)
+  entidadId String         @map("entidad_id") @db.Char(36)
+  accion    AccionAuditoria
+  fecha     DateTime       @default(now())
+
+  usuario Usuario @relation(fields: [idUsuario], references: [id], onDelete: Restrict)
+
+  @@index([idUsuario])
+  @@index([entidad, entidadId])
+  @@index([fecha])
+  @@map("auditoria")
 }
