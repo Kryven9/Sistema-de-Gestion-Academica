@@ -1,0 +1,30 @@
+name: CodeQL (análisis de seguridad estático)
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+  schedule:
+    # Escaneo completo semanal, independiente de la actividad de PRs
+    - cron: '0 6 * * 1'
+
+jobs:
+  analyze:
+    name: Analizar código (JavaScript)
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Inicializar CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+
+      - name: Ejecutar análisis CodeQL
+        uses: github/codeql-action/analyze@v3
