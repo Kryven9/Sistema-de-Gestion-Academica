@@ -1,12 +1,11 @@
-function Inicio() {
-  return (
-    <main className="min-h-screen flex flex-col items-center justify-center text-center px-6">
-      <h1 className="text-4xl font-bold text-slate-800 mb-3">
-        Sistema de Gestion Academica Universitaria
-      </h1>
-      <p className="text-slate-600 mb-6">Inicio.</p>
-    </main>
-  );
-}
+import { useAutenticacion } from '../contexto/ContextoAutenticacion.jsx';
+import PanelAdministrador from './PanelAdministrador.jsx';
+import PanelEstudiante from './PanelEstudiante.jsx';
+import PanelProfesor from './PanelProfesor.jsx';
 
-export default Inicio;
+export default function Inicio() {
+  const { sesion } = useAutenticacion();
+  if (sesion.usuario.rol === 'ADMINISTRADOR') return <PanelAdministrador />;
+  if (sesion.usuario.rol === 'PROFESOR') return <PanelProfesor />;
+  return <PanelEstudiante />;
+}
