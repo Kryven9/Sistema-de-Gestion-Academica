@@ -66,10 +66,41 @@ model Usuario {
   cursosDictados     Curso[]              @relation("ProfesorCursos")
   calificaciones     Calificacion[]       @relation("CalificadorCalificaciones")
   auditorias         Auditoria[]
+  sesiones            Sesion[]
+  solicitudesPassword SolicitudRestablecimiento[]
 
   @@index([rol])
   @@index([activo])
   @@map("usuarios")
+}
+
+model Sesion {
+  id           String   @id @default(uuid()) @db.Char(36)
+  idUsuario    String   @map("usuario_id") @db.Char(36)
+  expiraEn     DateTime @map("expira_en")
+  revocadaEn   DateTime? @map("revocada_en")
+  fechaCreacion DateTime @default(now()) @map("fecha_creacion")
+
+  usuario Usuario @relation(fields: [idUsuario], references: [id], onDelete: Cascade)
+
+  @@index([idUsuario])
+  @@index([expiraEn])
+  @@map("sesiones")
+}
+
+model SolicitudRestablecimiento {
+  id           String   @id @default(uuid()) @db.Char(36)
+  idUsuario    String   @map("usuario_id") @db.Char(36)
+  tokenHash    String   @unique @map("token_hash") @db.VarChar(128)
+  expiraEn     DateTime @map("expira_en")
+  usadoEn      DateTime? @map("usado_en")
+  fechaCreacion DateTime @default(now()) @map("fecha_creacion")
+
+  usuario Usuario @relation(fields: [idUsuario], references: [id], onDelete: Cascade)
+
+  @@index([idUsuario])
+  @@index([expiraEn])
+  @@map("solicitudes_restablecimiento")
 }
 
 // Informacion especifica de un usuario con rol ESTUDIANTE
