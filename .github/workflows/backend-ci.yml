@@ -41,12 +41,12 @@ jobs:
 
     steps:
       - name: Checkout código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Configurar Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
 
@@ -76,7 +76,7 @@ jobs:
         run: npx prisma migrate deploy
 
       - name: Ejecutar tests (unitarios e integración)
-        run: npm run test -- --ci --coverage
+        run: npm run test -- --run
 
       - name: Verificación de sintaxis del punto de entrada
         run: node --check src/main/server.js
