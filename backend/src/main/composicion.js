@@ -1,4 +1,4 @@
-import prisma from '../infrastructure/database/prisma/clientePrisma.js';
+import instanciaPrisma from '../infrastructure/database/prisma/clientePrisma.js';
 import PrismaUsuarioRepository from '../infrastructure/repositories/PrismaUsuarioRepository.js';
 import PrismaAuthRepository from '../infrastructure/repositories/PrismaAuthRepository.js';
 import HashContrasenas from '../infrastructure/auth/HashContrasenas.js';
@@ -14,8 +14,8 @@ import SolicitarRecuperacion from '../application/use-cases/SolicitarRecuperacio
 import RestablecerContrasena from '../application/use-cases/RestablecerContrasena.js';
 
 export default function crearComposicion() {
-  const usuarioRepository = new PrismaUsuarioRepository(prisma);
-  const authRepository = new PrismaAuthRepository(prisma);
+  const usuarioRepository = new PrismaUsuarioRepository(instanciaPrisma);
+  const authRepository = new PrismaAuthRepository(instanciaPrisma);
   const hash = new HashContrasenas();
   const tokens = new TokensJwt();
   const tokensRecuperacion = new TokensRecuperacion();
